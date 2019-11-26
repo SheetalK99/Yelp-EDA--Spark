@@ -1,8 +1,3 @@
-//Q4
-
-
-
-
 val businessFile = sc.textFile("/FileStore/tables/business.csv" )
 val reviewFile = sc.textFile("/FileStore/tables/review.csv")
 
