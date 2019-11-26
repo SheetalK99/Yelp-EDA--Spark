@@ -1,0 +1,19 @@
+//Q3
+val businessFile = sc.textFile("/FileStore/tables/business.csv")
+val reviewFile = sc.textFile("/FileStore/tables/review.csv" )
+val userFile = sc.textFile("/FileStore/tables/user.csv")
+
+val businessMap = businessFile.map(a => ( a.split("::")(0) , a.split("::")(2)) ).filter(a => (a._2 contains "Colleges & Universities")) //filter
+
+val reviewMap = reviewFile.map(a => ( a.split("::")(2) , (a.split("::")(1),a.split("::")(3))))
+val userMap = userFile.map(a => ( a.split("::")(0) , a.split("::")(1)) )
+
+val intermediate = businessMap.join(reviewMap).map({case(bid,(cat,(uid,star)))=>(uid,star)}).distinct()
+val res = intermediate.join(userMap).map({case((uid,(star,name)))=>uid+"\t"+name+"\t"+star}) //join two tables
+
+
+dbutils.fs.rm("/FileStore/tables/hw2_Q3", recurse=true)
+res.coalesce(1,true).saveAsTextFile("/FileStore/tables/hw2_Q3")
+
+  val output3 = sc.textFile("/FileStore/tables/hw2_Q3/part-00000").map(line=>line.split("\t"))
+  output3.take(10)

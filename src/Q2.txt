@@ -1,0 +1,58 @@
+var data = sc.textFile("/FileStore/tables/soc_LiveJournal1Adj-2d179.txt" ) // read in to input
+var input = data.map(a => a.split("\t")).filter(a => a.length == 2).map(a => (a(0),a(1).split(",")))
+
+import java.util.Calendar
+
+val now = Calendar.getInstance()
+
+def cal_age(DOB: String) : Integer ={
+    val date = DOB.split("/")
+    val Year = now.get(Calendar.YEAR)
+    val Month = now.get(Calendar.MONTH)
+    val Day = now.get(Calendar.DATE);
+    var age = Year - date(2).toInt -1
+    if(date(0).toInt < Month){
+      age += 1
+    }
+    if(date(0).toInt == Month){
+       if(date(1).toInt <= Day){
+         age += 1 
+       }
+    }
+    return age
+}
+
+//input.take(10).foreach{a => println (a._1 + "-->" + a._2.mkString(" "))} 
+var mout = input.flatMap(a => a._2.map(m=>(
+      if(m.toInt >= a._1.toInt) 
+      {
+        (a._1.toInt,m.toInt)-> a._2
+      }
+      else
+      {
+        (m.toInt,a._1.toInt)-> a._2 //else
+      }
+    )))
+var output = mout.reduceByKey((k,v) => k intersect(v)).map(a => (a._1, a._2.length))//common friends
+
+var result1 = output.sortBy(_._2,false).take(10) 
+
+var top10 = sc.parallelize(result1.map({case ((a,b),c) => (a,(b,c))})) //top 10 count and uid,fid
+//top10.collect().foreach{println}
+
+var data1 = sc.textFile("/FileStore/tables/userdata.txt")
+var userData = data1.map(a => a.split(",")).filter(a => a.length == 10).map(a => (a(0).toInt, a(1).toString() + ":" + ":" + a(4).toString() + "," + cal_age(a(9).toString()) ))
+
+var intermediate = top10.join(userData).map({case (a,((b,c),d)) => (b,(a,c,d))})
+
+var finalResult = intermediate.join(userData).map({case (b,((a,c,d),e)) => ((a,b),(c,d,e))})
+
+
+var res=finalResult.map({case ((a,b),(c,d,e)) => c + "\t" + d.split(":")(0)  + "\t" + d.split(":")(2) + "\t" + e.split(":")(0) + "\t"  + e.split(":")(2)})
+dbutils.fs.rm("/FileStore/tables/hw2_Q2" , recurse=true)
+res.coalesce(1,true).saveAsTextFile("/FileStore/tables/hw2_Q2")
+
+
+val output2 = sc.textFile("/FileStore/tables/hw2_Q2/part-00000").map(line=>line.split("\t"))
+output2.take(10)
+

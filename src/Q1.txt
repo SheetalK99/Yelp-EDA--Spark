@@ -1,0 +1,32 @@
+//Q1
+dbutils.fs.rm("/FileStore/tables/hw2_Q1", recurse=true)
+
+val friend_daata = sc.textFile("/FileStore/tables/soc_LiveJournal1Adj-2d179.txt")
+val result = friend_daata.flatMap(Map)
+  .reduceByKey(mutual)
+  .filter(!_._2.equals("null")).filter(!_._2.isEmpty)
+  .sortByKey()
+val res = result.map(value => value._1 + "\t" + value._2.size)
+//println(res)
+res.saveAsTextFile("/FileStore/tables/hw2_Q1")
+
+def mutual(first: Set[String], second: Set[String]) = {
+first.toSet intersect second.toSet
+}
+
+def Map(line: String) = {
+val line1 = line.split("\\t+")
+val person = line1(0)
+val newfriends = if (line1.length > 1) line1(1) else "null"
+val nfriends = newfriends.split(",")
+val friends = for (i <- 0 to nfriends.length - 1) yield nfriends(i)
+val pairs = nfriends.map(friend => {
+  if (person < friend) person + "," + friend else friend + "," + person
+})
+pairs.map(pair => (pair, friends.toSet))
+
+  
+}
+
+val output1 = sc.textFile("/FileStore/tables/hw2_Q1/part-00000").map(line=>line.split("\t"))
+output1.take(34)

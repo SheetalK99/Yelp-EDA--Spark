@@ -1,0 +1,29 @@
+//Q4
+
+
+
+
+val businessFile = sc.textFile("/FileStore/tables/business.csv" )
+val reviewFile = sc.textFile("/FileStore/tables/review.csv")
+
+val business = businessFile.map(a => ( a.split("::")(0) , (a.split("::")(1).toString()+"\t"+a.split("::")(2).toString())) ).filter(a => (a._2 contains "NY")) 
+
+val review = reviewFile.map(a => ( a.split("::")(2) , a.split("::")(3).toDouble)) 
+
+val mapper = review.mapValues(x=>(x,1))
+val reducer = mapper.reduceByKey((x,y)=>( x._1 + y._1 , x._2 + y._2 ))
+val avgRating = reducer.mapValues{case (sum , count) => sum / count } 
+
+ 
+
+val joinResult = avgRating.join(business).distinct()
+val tail20= joinResult.sortBy(_._2._1).take(20) //worst rating sorted by ascending
+
+val result = tail20.map( {case(uid,(rating,add))=>(uid.toString()+"\t"+add.toString()+"\t"+rating.toString())} )
+val res = sc.parallelize(result)
+
+dbutils.fs.rm("/FileStore/tables/hw2_Q4", recurse=true)
+res.coalesce(1,true).saveAsTextFile("/FileStore/tables/hw2_Q4")
+
+val output4 = sc.textFile("/FileStore/tables/hw2_Q4/part-00000").map(line=>line.split("\t"))
+output4.take(10)
